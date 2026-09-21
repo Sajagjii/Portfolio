@@ -1,7 +1,17 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-const widths = [375, 430, 768, 1024, 1440];
+const routes = [
+  "/",
+  "/work/",
+  "/lab/",
+  "/about/",
+  "/contact/",
+  "/projects/dynamic-class-scheduling/",
+  "/projects/agentic-ai/",
+  "/projects/creative-technology/",
+];
+const widths = [320, 375, 430, 768, 1024, 1440];
 for (const width of widths) {
   test(`homepage is accessible and fits at ${width}px`, async ({ page }) => {
     const errors: string[] = [];
@@ -11,25 +21,28 @@ for (const width of widths) {
     });
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "Engineering student",
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "SAJAGMAKHIJA✳",
     );
     await page.evaluate(() => document.fonts.ready);
-    const horizontalOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > innerWidth,
-    );
-    expect(horizontalOverflow).toBe(false);
-    const accessibility = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-      .analyze();
-    expect(accessibility.violations).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
     expect(errors).toEqual([]);
     await page.screenshot({ path: `.qa/home-${width}-viewport.png` });
     await page.screenshot({ path: `.qa/home-${width}.png`, fullPage: true });
   });
 }
-
-test("mobile navigation works by keyboard, closes on Escape and follows anchors", async ({
+test("mobile menu supports keyboard, Escape, route changes and active states", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
@@ -48,7 +61,7 @@ test("mobile navigation works by keyboard, closes on Escape and follows anchors"
   await expect(
     page
       .getByRole("navigation")
-      .getByRole("link", { name: "Work", exact: true }),
+      .getByRole("link", { name: "Index", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
@@ -58,55 +71,95 @@ test("mobile navigation works by keyboard, closes on Escape and follows anchors"
     .getByRole("navigation")
     .getByRole("link", { name: "Contact", exact: true })
     .click();
-  await expect(page).toHaveURL(/#contact$/);
+  await expect(page).toHaveURL(/\/contact\/$/);
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await expect(
-    page.getByRole("heading", { name: "Let’s talk." }),
-  ).toBeInViewport();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "HAVE AN IDEA?",
+  );
   await toggle.click();
   await expect(
     page
       .getByRole("navigation")
       .getByRole("link", { name: "Contact", exact: true }),
-  ).toHaveAttribute("aria-current", "location");
+  ).toHaveAttribute("aria-current", "page");
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expect(
+    page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Work", exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
-
-test("all internal targets resolve and external links are safe", async ({
+test("all routes, internal links, unique IDs and metadata resolve", async ({
   page,
   request,
 }) => {
-  await page.goto("/");
-  const links = await page.locator("a").evaluateAll((anchors) =>
-    anchors.map((anchor) => ({
-      href: anchor.getAttribute("href")!,
-      target: anchor.getAttribute("target"),
-      rel: anchor.getAttribute("rel"),
-    })),
-  );
-  for (const { href, target, rel } of links) {
-    if (href.startsWith("http")) {
-      expect(target).toBe("_blank");
-      expect(rel).toContain("noopener");
-      expect(rel).toContain("noreferrer");
-    } else if (href.includes("#")) {
-      expect(await page.locator(`[id="${href.split("#")[1]}"]`).count()).toBe(
-        1,
-      );
+  for (const route of routes) {
+    const response = await page.goto(route);
+    expect(response?.status(), route).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+      "content",
+      /\S+/,
+    );
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      /\S+/,
+    );
+    const duplicates = await page.locator("[id]").evaluateAll((elements) => {
+      const ids = elements.map((element) => element.id);
+      return ids.filter((id, index) => ids.indexOf(id) !== index);
+    });
+    expect(duplicates).toEqual([]);
+    const links = await page.locator("a").evaluateAll((anchors) =>
+      anchors.map((anchor) => ({
+        href: anchor.getAttribute("href")!,
+        target: anchor.getAttribute("target"),
+        rel: anchor.getAttribute("rel"),
+      })),
+    );
+    for (const { href, target, rel } of links) {
+      if (href.startsWith("http")) {
+        expect(target).toBe("_blank");
+        expect(rel).toContain("noopener");
+        expect(rel).toContain("noreferrer");
+      } else if (href.startsWith("#")) {
+        expect(await page.locator(`[id="${href.slice(1)}"]`).count()).toBe(1);
+      } else if (href.startsWith("/")) {
+        expect((await request.get(href)).ok(), href).toBe(true);
+      }
     }
   }
-  for (const href of new Set(
-    links
-      .map((link) => link.href)
-      .filter((href) => href.startsWith("/") && !href.includes("#")),
-  )) {
-    expect((await request.get(href)).ok(), href).toBe(true);
-  }
-  const contactLinks = page.locator("#contact a");
-  await expect(contactLinks.first()).toHaveText("LinkedIn");
-  await expect(page.locator(".footer-socials a").first()).toHaveText("GitHub");
 });
-
-test("project navigation, metadata and accessible detail pages", async ({
+test("every detail and section page is accessible across breakpoints", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  for (const route of routes.slice(1)) {
+    await page.goto(route);
+    for (const width of [320, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        `${route} at ${width}px`,
+      ).toBe(true);
+    }
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+      route,
+    ).toEqual([]);
+  }
+  expect(errors).toEqual([]);
+});
+test("project notes preserve content and provide the right return link", async ({
   page,
 }) => {
   for (const slug of [
@@ -121,22 +174,20 @@ test("project navigation, metadata and accessible detail pages", async ({
       "content",
       `${heading} — Sajag Makhija`,
     );
-    const accessibility = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-      .analyze();
-    expect(accessibility.violations).toEqual([]);
-    await page.setViewportSize({ width: 375, height: 812 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    await page.getByRole("link", { name: "All selected work" }).click();
-    await expect(page).toHaveURL(/\/#work$/);
+    await page
+      .getByRole("link", {
+        name:
+          slug === "dynamic-class-scheduling"
+            ? "All selected work"
+            : "Back to lab",
+      })
+      .click();
+    await expect(page).toHaveURL(
+      slug === "dynamic-class-scheduling" ? /\/work\/$/ : /\/lab\/$/,
+    );
   }
 });
-
-test("reduced motion and missing-project content stay intentional", async ({
+test("reduced motion, intentional missing content, and 404 work", async ({
   page,
 }) => {
   await page.goto("/");
@@ -151,25 +202,25 @@ test("reduced motion and missing-project content stay intentional", async ({
   await expect(nutri).not.toContainText(/Firestore|TDEE|Flutter|calories/i);
   await expect(page.locator("#skills")).toContainText("Flutter");
   await expect(page.locator("#skills")).toContainText("Dart");
-  const response = await page.goto("/projects/not-a-project/");
-  expect(response?.status()).toBe(404);
+  expect((await page.goto("/projects/not-a-project/"))?.status()).toBe(404);
   await expect(
     page.getByRole("link", { name: "Back to portfolio" }),
   ).toBeVisible();
 });
-
-test("content and navigation remain available without JavaScript", async ({
+test("content and mobile navigation work without JavaScript", async ({
   browser,
 }) => {
   const context = await browser.newContext({
     javaScriptEnabled: false,
-    viewport: { width: 1440, height: 1000 },
+    viewport: { width: 375, height: 900 },
   });
   const page = await context.newPage();
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Ideas, made tangible." }),
+    page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Lab", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("link", { name: "Explore Dynamic Class Scheduling System" })
@@ -177,5 +228,36 @@ test("content and navigation remain available without JavaScript", async ({
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Dynamic Class Scheduling System",
   );
+  await context.close();
+});
+test("normal motion is restrained and navigation does not produce client errors", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    reducedMotion: "no-preference",
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Lab", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/lab\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("LAB_/");
+  expect(
+    await page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.effect?.getTiming().iterations === Infinity,
+          ).length,
+    ),
+  ).toBe(0);
+  expect(errors).toEqual([]);
   await context.close();
 });

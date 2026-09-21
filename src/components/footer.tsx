@@ -1,23 +1,20 @@
-import { ArrowUpRight, ArrowUp } from "lucide-react";
+import { ArrowUp, ArrowUpRight } from "lucide-react";
 import { socials } from "@/data/socials";
-import Link from "next/link";
 
 export function Footer() {
   return (
     <footer className="footer page-width">
       <div className="footer-top">
-        <div>
-          <Link href="/" className="footer-name">
-            SAJAG MAKHIJA<span>.</span>
-          </Link>
-          <p>Engineering · Software · AI · Creative Technology</p>
-        </div>
+        <a href="/" className="footer-name">
+          SAJAG MAKHIJA<span>↗</span>
+        </a>
         <a href="#top" className="back-top" aria-label="Back to top">
-          <ArrowUp size={18} />
+          <ArrowUp size={20} />
         </a>
       </div>
       <div className="footer-bottom">
-        <span className="mono">© {new Date().getFullYear()} Sajag Makhija</span>
+        <span className="mono">© {new Date().getFullYear()} SAJAG MAKHIJA</span>
+        <span className="footer-note mono">BUILT WITH CURIOSITY.</span>
         <div className="footer-socials">
           {Object.values(socials).map((social) => (
             <a

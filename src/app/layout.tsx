@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
 };
 export const viewport: Viewport = {
-  themeColor: "#08090b",
+  themeColor: "#F5F3EE",
   width: "device-width",
   initialScale: 1,
 };
@@ -31,6 +31,9 @@ export default function RootLayout({
           Skip to content
         </a>
         <Navigation />
+        <noscript>
+          <style>{`.menu-toggle { display: none !important; } .navigation-links { display: flex !important; }`}</style>
+        </noscript>
         {children}
         <Footer />
       </body>

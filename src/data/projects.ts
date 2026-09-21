@@ -3,7 +3,10 @@ export type Project = {
   number: string;
   title: string;
   category: string;
-  tone: "blue" | "steel" | "cyan" | "amber";
+  collection: "work" | "lab";
+  layout: "editorial" | "split" | "full" | "technical";
+  year?: string;
+  stack?: string[];
   visual: "schedule" | "nutrition" | "agents" | "film";
   summary?: string;
   concepts: string[];
@@ -14,6 +17,7 @@ export type Project = {
       | "Constraints"
       | "Approach"
       | "Architecture"
+      | "Build"
       | "Result"
       | "What I learned"
       | "What I would improve",
@@ -31,7 +35,8 @@ export const projects: Project[] = [
     number: "01",
     title: "Dynamic Class Scheduling System",
     category: "Engineering / Systems",
-    tone: "blue",
+    collection: "work",
+    layout: "editorial",
     visual: "schedule",
     summary:
       "Scheduling classes means working with constraints. A project exploring how classes, time and shared resources fit together.",
@@ -44,7 +49,7 @@ export const projects: Project[] = [
     sections: {
       Overview:
         "An engineering project centred on class scheduling and resource allocation. Its focus is the relationship between scheduling decisions, constraints and engineering trade-offs.",
-      Constraints:
+      Problem:
         "Class and resource allocation form the core of the problem. Scheduling, optimization and system design are the concepts behind this work.",
     },
     links: [],
@@ -54,7 +59,8 @@ export const projects: Project[] = [
     number: "02",
     title: "NutriFinder",
     category: "Software / Application",
-    tone: "steel",
+    collection: "work",
+    layout: "full",
     visual: "nutrition",
     concepts: [],
     sections: {},
@@ -65,7 +71,8 @@ export const projects: Project[] = [
     number: "03",
     title: "Agentic AI & Workflow Experiments",
     category: "AI / Automation",
-    tone: "cyan",
+    collection: "lab",
+    layout: "technical",
     visual: "agents",
     summary:
       "Exploring how LLMs, APIs and conventional software can work together as practical tools beyond a chat interface.",
@@ -88,7 +95,8 @@ export const projects: Project[] = [
     number: "04",
     title: "A World Returning to Colour",
     category: "Creative Technology / Film Concept",
-    tone: "amber",
+    collection: "lab",
+    layout: "split",
     visual: "film",
     summary:
       "An emotionally numb character. A world in black and white. A generative short-film concept in which colour returns with feeling.",

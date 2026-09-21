@@ -1,48 +1,77 @@
-import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { projects, hasProjectDetails } from "@/data/projects";
-import { GlassSurface, Reveal } from "@/components/interaction";
+import { projects, hasProjectDetails, type Project } from "@/data/projects";
 import { ProjectVisual } from "@/components/project-visual";
-
+export function ProjectFeature({
+  project,
+  layout = project.layout,
+}: {
+  project: Project;
+  layout?: Project["layout"];
+}) {
+  return (
+    <article
+      className={`project project-${layout}`}
+      aria-labelledby={`${project.slug}-title`}
+    >
+      <div className="project-info">
+        <div className="project-meta mono">
+          <span className="project-number">{project.number}</span>
+          <span>{project.category}</span>
+        </div>
+        <h3 id={`${project.slug}-title`}>{project.title}</h3>
+        {project.summary && (
+          <p className="project-summary">{project.summary}</p>
+        )}
+        {project.concepts.length > 0 && (
+          <ul className="tags">
+            {project.concepts.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+        )}
+        {(project.year || project.stack?.length) && (
+          <p className="mono project-facts">
+            {project.year}
+            {project.year && project.stack?.length ? " / " : ""}
+            {project.stack?.join(" / ")}
+          </p>
+        )}
+        {hasProjectDetails(project) && (
+          <a
+            className="text-link"
+            href={`/projects/${project.slug}/`}
+            aria-label={`Explore ${project.title}`}
+          >
+            Read project notes <ArrowUpRight size={18} />
+          </a>
+        )}
+        {project.links.map((link) => (
+          <a
+            className="text-link"
+            key={link.href}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {link.label}
+            <ArrowUpRight size={18} />
+          </a>
+        ))}
+      </div>
+      <div className="project-surface">
+        <ProjectVisual kind={project.visual} />
+      </div>
+    </article>
+  );
+}
 export function FeaturedProjects() {
   return (
     <div className="project-list">
-      {projects.map((project) => (
-        <Reveal key={project.slug}>
-          <article
-            className={`project project-${project.tone}`}
-            aria-labelledby={`${project.slug}-title`}
-          >
-            <GlassSurface className="project-surface">
-              <ProjectVisual kind={project.visual} />
-            </GlassSurface>
-            <div className="project-info">
-              <span className="project-number mono">/{project.number}</span>
-              <div className="project-description">
-                <p className="eyebrow">{project.category}</p>
-                <h3 id={`${project.slug}-title`}>{project.title}</h3>
-                {project.summary && <p>{project.summary}</p>}
-                {project.concepts.length > 0 && (
-                  <ul className="tags">
-                    {project.concepts.map((tag) => (
-                      <li key={tag}>{tag}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {hasProjectDetails(project) && (
-                <Link
-                  className="project-link"
-                  href={`/projects/${project.slug}/`}
-                  aria-label={`Explore ${project.title}`}
-                >
-                  <ArrowUpRight size={25} strokeWidth={1.5} />
-                </Link>
-              )}
-            </div>
-          </article>
-        </Reveal>
-      ))}
+      {projects
+        .filter((project) => project.collection === "work")
+        .map((project) => (
+          <ProjectFeature key={project.slug} project={project} />
+        ))}
     </div>
   );
 }
